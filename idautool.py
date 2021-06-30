@@ -2,7 +2,7 @@
 """Set IDAU boundary registers for Renesas RA6M5 MCUs"""
 
 usage = "%prog ELFFILE"
-__version__ = "0.1"
+__version__ = "0.2"
 __copyright__ = "Copyright (c) 2021 Henrik Maier. All rights reserved."
 __license__ = "MIT, http://opensource.org/licenses/MIT"
 
@@ -78,6 +78,7 @@ def main():
     parser = optparse.OptionParser(usage, version="%%prog %s" % __version__)
     parser.add_option("-v", "--verbose", action="store_true", help="verbose mode")
     parser.add_option("-e", "--emuType", default="jlink", help="emulator type (jlink, e2 or e2lite)")
+    parser.add_option("-d", "--dryrun", action="store_true", help="dry run, don't change anything, print commandline only")
     options, args = parser.parse_args()
     if len(args) > 1:
         parser.error("Too many arguments")
@@ -136,6 +137,9 @@ def main():
     f.close()
 
     # Run the Renesas command line tool
+    if options.dryrun:
+        print("Command line: %s %s" % (RDPM_PATH, argStr))
+        sys.exit(0)
     output = execute(RDPM_PATH, argStr)
 
     #
