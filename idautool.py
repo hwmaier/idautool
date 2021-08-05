@@ -2,9 +2,9 @@
 """Set IDAU boundary registers for Renesas RA6M5 MCUs"""
 
 usage = "%prog ELFFILE"
-__version__ = "0.2"
+__version__ = "0.3"
 __copyright__ = "Copyright (c) 2021 Henrik Maier. All rights reserved."
-__license__ = "MIT, http://opensource.org/licenses/MIT"
+__license__ = "SPDX-License-Identifier: Apache-2.0"
 
 import re, sys, os, optparse
 try:
