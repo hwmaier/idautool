@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-"""Set IDAU boundary registers for Renesas RA6M5 MCUs"""
+"""Set IDAU boundary registers for Renesas RA TrustZone MCUs"""
 
 usage = "%prog ELFFILE"
-__version__ = "0.3"
+__version__ = "1.0"
 __copyright__ = "Copyright (c) 2021 Henrik Maier. All rights reserved."
 __license__ = "SPDX-License-Identifier: Apache-2.0"
 
-import re, sys, os, optparse
+import re, sys, os, optparse, time, winreg
 try:
     from elftools.elf.elffile import ELFFile
 except:
@@ -14,9 +14,6 @@ except:
 
 
 g_verbose = False
-
-# There needs to be a better way to resolve the location of RenesasDevicePartitionManagerCmd
-RDPM_PATH = r"c:\Users\%s\.eclipse\com.renesas.platform_1476787444\DebugComp\RA\DevicePartitionManager\RenesasDevicePartitionManagerCmd.exe" % os.environ.get('USERNAME')
 
 
 #
@@ -26,6 +23,19 @@ RDPM_PATH = r"c:\Users\%s\.eclipse\com.renesas.platform_1476787444\DebugComp\RA\
 def error(msg):
     """Prints error message and exists program"""
     sys.exit("%s error: %s!" % (os.path.basename(sys.argv[0]), msg))
+
+
+def findRenesasRfpTool():
+    """Searches for an installed Renesas Flash Programmer tool in the Windows registry"""
+    try:
+        registry = winreg.ConnectRegistry(None,winreg.HKEY_LOCAL_MACHINE)
+        key = winreg.OpenKey(registry,r"SOFTWARE\Classes\rpjfile\shell\Open\command")
+        val = winreg.QueryValue(key, None)
+        match = re.match(r'"(.*?)".*', val)[1]
+        path = os.path.dirname(match)    
+        return os.path.join(path, 'rfp-cli.exe')
+    except:
+        error("Renesas Flash Programmer must be installed")
 
 
 def getstatusoutput(cmd):
@@ -45,8 +55,9 @@ def getstatusoutput(cmd):
 
 def execute(cmd, argStr):
     """Execute shell commands"""
-    cmdLine = cmd + ' ' + argStr
-    print("Execute: %s" % cmdLine)
+    cmdLine = '"' + cmd + '" ' + argStr
+    if g_verbose:
+        print("Execute: %s" % cmdLine)
     status, output = getstatusoutput(cmdLine)
     if status != 0:
         print(output)
@@ -77,15 +88,21 @@ def main():
     print(__doc__)
     parser = optparse.OptionParser(usage, version="%%prog %s" % __version__)
     parser.add_option("-v", "--verbose", action="store_true", help="verbose mode")
-    parser.add_option("-e", "--emuType", default="jlink", help="emulator type (jlink, e2 or e2lite)")
-    parser.add_option("-d", "--dryrun", action="store_true", help="dry run, don't change anything, print commandline only")
+    parser.add_option("-t", "--tool", default="jlink", help="programming tool (jlink, e2 or e2l)")
+    parser.add_option("-d", "--dryrun", action="store_true", help="dry run, don't change anything, print command line only")
     options, args = parser.parse_args()
     if len(args) > 1:
         parser.error("Too many arguments")
     if len(args) < 1:
         parser.error("No input ELF file")
     g_verbose = options.verbose
-    argStr = "-emuType %s -action BOUNDARY" % options.emuType
+    if options.tool == "jlink":
+        toolOptions = "jlink -speed 115200"
+    else:
+        toolOptions = options.emuType
+    argStr = "-noprogress -d ra -t %s " % toolOptions
+
+    rfpCliPath = findRenesasRfpTool()
 
     #
     # Process ELF file
@@ -112,17 +129,15 @@ def main():
     s = readSymbol(symtab, '__tz_FLASH_S')
     c = readSymbol(symtab, '__tz_FLASH_C')
     n = readSymbol(symtab, '__tz_FLASH_N')
-    idauCFS = (c - s) / 1024
-    idauCFNSC = (n - c) / 1024
-    argStr += " -idauCFS %u -idauCFNSC %u" % (idauCFS, idauCFNSC)
+    idauCFS = (c - s) // 1024
+    idauCFNSC = (n - c) // 1024
 
     #
     # Data Flash -idauDFS
     #
     s = readSymbol(symtab, '__tz_DATA_FLASH_S')
     n = readSymbol(symtab, '__tz_DATA_FLASH_N')
-    idauDFS = (n - s) / 1024
-    argStr += " -idauDFS %u" % (idauDFS)
+    idauDFS = (n - s) // 1024
 
     #
     # SRAM -idauSRAMS, -idauSRAMNSC
@@ -130,26 +145,46 @@ def main():
     s = readSymbol(symtab, '__tz_RAM_S')
     c = readSymbol(symtab, '__tz_RAM_C')
     n = readSymbol(symtab, '__tz_RAM_N')
-    idauSRAMS = (c - s) / 1024
-    idauSRAMNSC = (n - c) / 1024
-    argStr += " -idauSRAMS %u -idauSRAMNSC %u" % (idauSRAMS, idauSRAMNSC)
+    idauSRAMS = (c - s) // 1024
+    idauSRAMNSC = (n - c) // 1024
 
     f.close()
+    startTime = time.time()        
 
-    # Run the Renesas command line tool
+    #
+    # Run the Renesas command line tool to check current settings
+    #
     if options.dryrun:
-        print("Command line: %s %s" % (RDPM_PATH, argStr))
-        sys.exit(0)
-    output = execute(RDPM_PATH, argStr)
+        match = [-1, -1, -1, -1, -1] # Force change to be detected
+    else:
+        output = execute(rfpCliPath, argStr + "-rfo")
+        try:
+            match = re.search('Boundary: (\d+),(\d+),(\d+),(\d+),(\d+)$', output, re.MULTILINE)
+            if match.lastindex != 5:
+                raise Exception()
+            if (g_verbose):
+                print(re.sub(r'\n\s*\n','\n', output, re.MULTILINE)) # Print output with empty lines removed
+        except:
+            print(output)
+            error("Error parsing tool output")
 
     #
-    # Parse output and reduce verbosity
+    # Run the Renesas command line tool to program updated settings
     #
-    result = re.findall(r"Programming IDAU(.*?)SUCCESSFUL!", output, re.MULTILINE|re.DOTALL)
-    if result:
-        print("Programming IDAU" + result[0] + "SUCCESSFUL!")
+    if idauCFS == int(match[1]) and idauCFNSC == int(match[2]) and idauDFS == int(match[3]) and idauSRAMS == int(match[4]) and idauSRAMNSC == int(match[5]):
+        print("IDAU boundary registers are already correctly set, no change.")
     else:
-        print(output)
+        print("IDAU boundary registers are different, re-programming...")
+        cmdStr = "-noverify-fo -fo boundary %u,%u,%u,%u,%u -p" % (idauCFS, idauCFNSC, idauDFS, idauSRAMS, idauSRAMNSC)
+        if options.dryrun:
+            print("Command line: %s %s" % (rfpCliPath, argStr + cmdStr))
+            sys.exit(0)
+        output = execute(rfpCliPath, argStr + cmdStr)
+        print(re.sub(r'\n\s*\n','\n', output, re.MULTILINE)) # Print output with empty lines removed
+
+    if (g_verbose):
+        executionTime = (time.time() - startTime)
+        print("Execution time: %0.2fs" % executionTime)
 
 
 if __name__ == "__main__":

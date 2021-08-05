@@ -1,19 +1,22 @@
 # idautool
 
-Tool to extract and set IDAU boundary registers for Renesas RA6M5 MCUs
+Tool to extract and set IDAU boundary registers for Renesas RA TrustZone MCUs
 
 
 ## Prerequsites
 
-Renesas' e2Studio must be installed as it provides the `RenesasDevicePartitionManagerCmd` tool.
+Renesas Flash Programmer v3 must be installed as it provides the `rfp-cli` tool.
+Currently only Windows is supported.
 
 
 ## How it works
 
 The *idautool* parses a compiled ELF file and extracts from the symbol table the location of the IDAU partitions and calculates the size of each partition.
-Then it composes a command line with arguments for the `RenesasDevicePartitionManagerCmd` which is utilised to set the partition boundary registers of the Renesas RA MCU.
+Then it composes a command line with arguments for the `rfp-cli` which is utilised to set the partition boundary registers of the Renesas RA MCU.
 
-The default programmer is J-link, but e2 and e2 Lite can be used as well (`--emuType` command line option).
+The default programmer is J-link, but e2 and e2 Lite can be used as well (`--tool` command line option).
+
+The tool checks first current setting and only re-programs when the new settings are different. This avoids repetitive flashing of identical settings during debug sessions.
 
 
 ## Usage
@@ -22,15 +25,15 @@ The default programmer is J-link, but e2 and e2 Lite can be used as well (`--emu
 python idautool.py --help
 ```
 ```
-Set IDAU boundary registers for Renesas RA6M5 MCUs
+Set IDAU boundary registers for Renesas RA TrustZone MCUs
 Usage: idautool.py ELFFILE
 
 Options:
   --version             show program's version number and exit
   -h, --help            show this help message and exit
   -v, --verbose         verbose mode
-  -e EMUTYPE, --emuType=EMUTYPE
-                        emulator type (jlink, e2 or e2lite)
+  -t TOOL, --tool=TOOL  programming tool (jlink, e2 or e2l)
+  -d, --dryrun          dry run, don't change anything, print command line only
 ```
 
 
@@ -41,18 +44,19 @@ Sample run:
 python idautool.py quickstart_ek_ra6m5_ep.elf
 ```
 ```
-Set IDAU boundary registers for Renesas RA6M5 MCUs
-Execute: c:\Users\...\.eclipse\com.renesas.platform_1476787444\DebugComp\RA\DevicePartitionManager\RenesasDevicePartitionManagerCmd.exe -emuType jlink -action BOUNDARY -idauCFS 11 -idauCFNSC 21 -idauDFS 0 -idauSRAMS 15 -idauSRAMNSC 1
-Programming IDAU memory boundaries with the following region size settings...
-        -       Code Flash Secure       (kB)    : 11
-        -       Code Flash NSC          (kB)    : 21
-        -       Data Flash Secure       (kB)    : 0
-        -       SRAM Secure             (kB)    : 15
-        -       SRAM NSC                (kB)    : 1
-SUCCESSFUL!
+Set IDAU boundary registers for Renesas RA TrustZone MCUs
+IDAU boundary registers are different, re-programming...
+Renesas Flash Programmer CLI V1.01
+Module Version: V3.08.02.000
+Connecting the tool (J-Link)
+Tool: J-Link (SEGGER J-Link ARM)
+Interface: 2 wire UART
+Connecting the target device
+Speed: 115,200 bps
+Connected to R7FA6M5BH3CFC
+Writing data to the target device
+  [Flash Options]
+    Boundary
+Disconnecting the tool
+Operation successful
 ```
-
-
-## Potential issues
-
-The install location of the `RenesasDevicePartitionManagerCmd` tool is currently hardcoded as `RDPM_PATH`.  This may need adjustment depending on the e2Studio version.
