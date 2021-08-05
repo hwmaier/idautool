@@ -180,11 +180,19 @@ def main():
             print("Command line: %s %s" % (rfpCliPath, argStr + cmdStr))
             sys.exit(0)
         output = execute(rfpCliPath, argStr + cmdStr)
-        print(re.sub(r'\n\s*\n','\n', output, re.MULTILINE)) # Print output with empty lines removed
+        if (g_verbose):
+            print(re.sub(r'\n\s*\n','\n', output, re.MULTILINE)) # Print output with empty lines removed
 
     if (g_verbose):
         executionTime = (time.time() - startTime)
         print("Execution time: %0.2fs" % executionTime)
+
+    print()
+    print("\tCode Flash Secure %4d KB" % (idauCFS))
+    print("\tCode Flash NSC    %4d KB" % (idauCFNSC))
+    print("\tData Flash Secure %4d KB" % (idauDFS))
+    print("\tSRAM Secure       %4d KB" % (idauSRAMS))
+    print("\tSRAM NSC          %4d KB" % (idauSRAMNSC))
 
 
 if __name__ == "__main__":

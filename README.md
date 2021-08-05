@@ -41,22 +41,15 @@ Sample run:
 
 
 ```
-python idautool.py quickstart_ek_ra6m5_ep.elf
+python idautool.py hello_world.elf
 ```
 ```
 Set IDAU boundary registers for Renesas RA TrustZone MCUs
 IDAU boundary registers are different, re-programming...
-Renesas Flash Programmer CLI V1.01
-Module Version: V3.08.02.000
-Connecting the tool (J-Link)
-Tool: J-Link (SEGGER J-Link ARM)
-Interface: 2 wire UART
-Connecting the target device
-Speed: 115,200 bps
-Connected to R7FA6M5BH3CFC
-Writing data to the target device
-  [Flash Options]
-    Boundary
-Disconnecting the tool
-Operation successful
+
+        Code Flash Secure    3 KB
+        Code Flash NSC      29 KB
+        Data Flash Secure    0 KB
+        SRAM Secure          3 KB
+        SRAM NSC             5 KB
 ```
