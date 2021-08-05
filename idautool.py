@@ -6,7 +6,11 @@ __version__ = "1.0"
 __copyright__ = "Copyright (c) 2021 Henrik Maier. All rights reserved."
 __license__ = "SPDX-License-Identifier: Apache-2.0"
 
-import re, sys, os, optparse, time, winreg
+import re, sys, os, optparse, time
+try:
+    import winreg
+except:
+    sys.exit("error: Currently only Windows is supported!")
 try:
     from elftools.elf.elffile import ELFFile
 except:
@@ -35,7 +39,7 @@ def findRenesasRfpTool():
         path = os.path.dirname(match)    
         return os.path.join(path, 'rfp-cli.exe')
     except:
-        error("Renesas Flash Programmer must be installed")
+        error("Renesas Flash Programmer must be installed (https://www.renesas.com/rfp)")
 
 
 def getstatusoutput(cmd):
@@ -180,11 +184,19 @@ def main():
             print("Command line: %s %s" % (rfpCliPath, argStr + cmdStr))
             sys.exit(0)
         output = execute(rfpCliPath, argStr + cmdStr)
-        print(re.sub(r'\n\s*\n','\n', output, re.MULTILINE)) # Print output with empty lines removed
+        if (g_verbose):
+            print(re.sub(r'\n\s*\n','\n', output, re.MULTILINE)) # Print output with empty lines removed
 
     if (g_verbose):
         executionTime = (time.time() - startTime)
         print("Execution time: %0.2fs" % executionTime)
+
+    print()
+    print("\tCode Flash Secure %4d KB" % (idauCFS))
+    print("\tCode Flash NSC    %4d KB" % (idauCFNSC))
+    print("\tData Flash Secure %4d KB" % (idauDFS))
+    print("\tSRAM Secure       %4d KB" % (idauSRAMS))
+    print("\tSRAM NSC          %4d KB" % (idauSRAMNSC))
 
 
 if __name__ == "__main__":

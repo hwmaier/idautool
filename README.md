@@ -12,7 +12,7 @@ Currently only Windows is supported.
 ## How it works
 
 The *idautool* parses a compiled ELF file and extracts from the symbol table the location of the IDAU partitions and calculates the size of each partition.
-Then it composes a command line with arguments for the `rfp-cli` which is utilised to set the partition boundary registers of the Renesas RA MCU.
+Then it composes a command line with arguments for the `rfp-cli` tool which is utilised to set the partition boundary registers of the Renesas RA MCU.
 
 The default programmer is J-link, but e2 and e2 Lite can be used as well (`--tool` command line option).
 
@@ -41,22 +41,15 @@ Sample run:
 
 
 ```
-python idautool.py quickstart_ek_ra6m5_ep.elf
+python idautool.py hello_world.elf
 ```
 ```
 Set IDAU boundary registers for Renesas RA TrustZone MCUs
 IDAU boundary registers are different, re-programming...
-Renesas Flash Programmer CLI V1.01
-Module Version: V3.08.02.000
-Connecting the tool (J-Link)
-Tool: J-Link (SEGGER J-Link ARM)
-Interface: 2 wire UART
-Connecting the target device
-Speed: 115,200 bps
-Connected to R7FA6M5BH3CFC
-Writing data to the target device
-  [Flash Options]
-    Boundary
-Disconnecting the tool
-Operation successful
+
+        Code Flash Secure    3 KB
+        Code Flash NSC      29 KB
+        Data Flash Secure    0 KB
+        SRAM Secure          3 KB
+        SRAM NSC             5 KB
 ```
