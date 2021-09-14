@@ -2,7 +2,7 @@
 """Set IDAU boundary registers for Renesas RA TrustZone MCUs"""
 
 usage = "%prog ELFFILE"
-__version__ = "1.0"
+__version__ = "1.1"
 __copyright__ = "Copyright (c) 2021 Henrik Maier. All rights reserved."
 __license__ = "SPDX-License-Identifier: Apache-2.0"
 
@@ -101,7 +101,7 @@ def main():
         parser.error("No input ELF file")
     g_verbose = options.verbose
     if options.tool == "jlink":
-        toolOptions = "jlink -speed 115200"
+        toolOptions = "jlink" # -speed 115200 won't work for OB programmer
     else:
         toolOptions = options.emuType
     argStr = "-noprogress -d ra -t %s " % toolOptions
