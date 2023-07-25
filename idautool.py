@@ -2,7 +2,7 @@
 """Set IDAU boundary registers for Renesas RA TrustZone MCUs"""
 
 usage = "%prog ELFFILE"
-__version__ = "1.1"
+__version__ = "1.2"
 __copyright__ = "Copyright (c) 2021 Henrik Maier. All rights reserved."
 __license__ = "SPDX-License-Identifier: Apache-2.0"
 
@@ -36,7 +36,7 @@ def findRenesasRfpTool():
         key = winreg.OpenKey(registry,r"SOFTWARE\Classes\rpjfile\shell\Open\command")
         val = winreg.QueryValue(key, None)
         match = re.match(r'"(.*?)".*', val)[1]
-        path = os.path.dirname(match)    
+        path = os.path.dirname(match)  
         return os.path.join(path, 'rfp-cli.exe')
     except:
         error("Renesas Flash Programmer must be installed (https://www.renesas.com/rfp)")
@@ -101,10 +101,14 @@ def main():
         parser.error("No input ELF file")
     g_verbose = options.verbose
     if options.tool == "jlink":
-        toolOptions = "jlink" # -speed 115200 won't work for OB programmer
+        # RFP 3.12 defaults to 'swd' interface and hence requires 
+        #   interface to be set to 'uart' because swd does not support flash options.
+        # OB-S124 programmer does not work w/ '-speed 115200' and also it makes 
+        #   not much difference for real JLink, so we stick to default speed.
+        toolOptions = "jlink -interface uart" 
     else:
         toolOptions = options.emuType
-    argStr = "-noprogress -d ra -t %s " % toolOptions
+    argStr = "-noprogress -device ra -tool %s " % toolOptions
 
     rfpCliPath = findRenesasRfpTool()
 
@@ -179,7 +183,7 @@ def main():
         print("IDAU boundary registers are already correctly set, no change.")
     else:
         print("IDAU boundary registers are different, re-programming...")
-        cmdStr = "-noverify-fo -fo boundary %u,%u,%u,%u,%u -p" % (idauCFS, idauCFNSC, idauDFS, idauSRAMS, idauSRAMNSC)
+        cmdStr = "-fo boundary %u,%u,%u,%u,%u -p" % (idauCFS, idauCFNSC, idauDFS, idauSRAMS, idauSRAMNSC)
         if options.dryrun:
             print("Command line: %s %s" % (rfpCliPath, argStr + cmdStr))
             sys.exit(0)
